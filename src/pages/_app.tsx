@@ -2,7 +2,7 @@ import type { AppProps } from 'next/app'
 import { useEffect } from 'react'
 import '../styles/globals.css'
 
-function MyApp({ Component, pageProps }: AppProps) {
+function HikingHelper({ Component, pageProps }: AppProps) {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -14,4 +14,4 @@ function MyApp({ Component, pageProps }: AppProps) {
   return <Component {...pageProps} />
 }
 
-export default MyApp 
+export default HikingHelper 
