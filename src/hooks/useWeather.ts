@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { WeatherData } from '../types/weather';
+import { Mountain } from '../types/mountain';
 
-export const useWeather = () => {
+export const useWeather = (mountain?: Mountain | null) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchWeather = async (lat: number, lon: number) => {
+    const fetchWeather = async (lat: number, lon: number, locationName?: string) => {
       try {
-        // 좌표를 기상청 격자 좌표로 변환
         const dfsXY = convertToGridCoord(lat, lon);
+        console.log('격자 좌표:', dfsXY);
         
         const baseUrl = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
         const serviceKey = process.env.NEXT_PUBLIC_KMA_API_KEY;
@@ -20,11 +21,19 @@ export const useWeather = () => {
 
         const url = `${baseUrl}?serviceKey=${serviceKey}&numOfRows=10&pageNo=1&base_date=${baseDate}&base_time=${baseTime}&nx=${dfsXY.x}&ny=${dfsXY.y}&dataType=JSON`;
         
+        console.log('API 요청:', {
+          위치: locationName,
+          위도: lat,
+          경도: lon,
+          격자X: dfsXY.x,
+          격자Y: dfsXY.y
+        });
+
         const response = await fetch(url);
         const data = await response.json();
-        
-        if (data.response.header.resultCode !== '00') {
-          throw new Error(data.response.header.resultMsg);
+
+        if (!data.response?.body?.items?.item) {
+          throw new Error('날씨 데이터가 없습니다');
         }
 
         const items = data.response.body.items.item;
@@ -35,23 +44,29 @@ export const useWeather = () => {
         });
 
         setWeather({
-          temp: weatherData.T1H,         // 기온
-          humidity: weatherData.REH,      // 습도
-          windSpeed: weatherData.WSD,     // 풍속
-          windDeg: weatherData.VEC,       // 풍향
-          precipitation: weatherData.RN1,  // 1시간 강수량
-          description: getWeatherDescription(weatherData.PTY), // 강수형태 코드를 설명으로 변환
-          location: await getLocationName(lat, lon) // 위치명 가져오기
+          temp: weatherData.T1H,
+          humidity: weatherData.REH,
+          windSpeed: weatherData.WSD,
+          windDeg: weatherData.VEC,
+          precipitation: weatherData.RN1,
+          description: getWeatherDescription(weatherData.PTY),
+          location: locationName || `${dfsXY.x},${dfsXY.y}`
         });
       } catch (err) {
+        console.error('날씨 정보 조회 실패:', err);
         setError('날씨 정보를 가져오는데 실패했습니다.');
-        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (navigator.geolocation) {
+    if (mountain) {
+      // 산 정보가 있는 경우 해당 산의 날씨 정보를 가져옴
+      console.log('산 날씨 요청:', mountain.name);
+      fetchWeather(mountain.latitude, mountain.longitude, mountain.name);
+    } else if (navigator.geolocation) {
+      // 산 정보가 없는 경우 현재 위치의 날씨 정보를 가져옴
+      console.log('현재 위치 날씨 요청');
       navigator.geolocation.getCurrentPosition(
         (position) => {
           fetchWeather(position.coords.latitude, position.coords.longitude);
@@ -65,7 +80,7 @@ export const useWeather = () => {
       setError('이 브라우저에서는 위치 정보를 지원하지 않습니다.');
       setLoading(false);
     }
-  }, []);
+  }, [mountain]); // mountain이 변경될 때마다 useEffect 실행
 
   return { weather, loading, error };
 };

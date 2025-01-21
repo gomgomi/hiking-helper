@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useWeather } from '../hooks/useWeather'
 import { WeatherInfo } from '../components/WeatherInfo'
+import { MountainWeatherList } from '../components/MountainWeatherList'
 
 export default function Home() {
   const { weather, loading, error } = useWeather();
@@ -14,10 +15,10 @@ export default function Home() {
       </Head>
 
       <main>
-        <h1>등산 날씨 정보</h1>
-        {loading && <p>날씨 정보를 불러오는 중...</p>}
-        {error && <p className="error">{error}</p>}
-        {weather && <WeatherInfo weather={weather} />}
+        <h1 className="text-2xl font-bold text-center my-4">
+          100대 명산 날씨 정보
+        </h1>
+        <MountainWeatherList />
       </main>
 
       <style jsx>{`
